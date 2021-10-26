@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <title>WebSocket demo</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/plyr/3.6.7/plyr.css" />
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/hls.js/0.11.0/hls.min.js" crossorigin="anonymous"
+        referrerpolicy="no-referrer"></script>
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"
+        integrity="sha256-/xUj+3OJU5yExlq6GSYGSHk7tPXikynS7ogEvDej/m4=" crossorigin="anonymous"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/plyr/3.6.7/plyr.min.js"></script>
+</head>
+
+<body>
+
+    <div class="play-box">
+        <a href="/" target="_blank" title="另開新視窗">
+            <h1 class="logo">Rti 中央廣播電臺</h1>
+        </a>
+        <h1 class="play-title">華語線上收聽 - <a href="/radio/programView/id/1638">潮臺灣2 - 開箱職人BAR</a></h1>
+        <audio id="player" autoplay controls crossorigin style="width:100%"></audio>
+    </div>
+
+    <script>
+        $(document).ready(function () {
+            var ws = new WebSocket("ws://127.0.0.1:8765/"),
+                messages = document.createElement('ul');
+            ws.onmessage = function (event) {
+                data = JSON.parse(event.data)
+                if (data.partial) {
+                    var messages = document.getElementsByTagName('ul')[0],
+                        message = document.createElement('li'),
+                        content = document.createTextNode(data.partial);
+                    message.appendChild(content);
+                    messages.appendChild(message);
+                }
+            };
+            document.body.appendChild(messages);
+            const source = 'https://www.soundvideostar.com/live/_definst_/rti3/playlist.m3u8';
+            const audio = document.querySelector('audio');
+            const player = new Plyr(audio, {
+                captions: { active: true, update: true, language: 'auto' },
+                settings: ['captions', 'quality', 'loop']
+            });
+            if (!Hls.isSupported()) { audio.src = source; }
+            else {
+                const hls = new Hls(); hls.loadSource(source);
+                hls.attachMedia(audio);
+                player.on('languagechange', () => { setTimeout(() => hls.subtitleTrack = player.currentTrack, 50); });
+            }
+            window.player = player;
+        });
+
+    </script>
+</body>
+
+</html>
