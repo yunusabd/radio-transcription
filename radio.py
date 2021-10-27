@@ -63,6 +63,8 @@ async def run_stt(websocket, path):
                             "1",
                             "-ar",
                             "8000",
+                            "-filter:a",
+                            "loudnorm",
                             "-acodec",
                             "pcm_s16le",
                             "audio/" + line[:-4] + ".wav",

@@ -11,19 +11,25 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/hls.js/0.11.0/hls.min.js" crossorigin="anonymous"
         referrerpolicy="no-referrer"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/plyr/3.6.7/plyr.min.js"></script>
+    <style>
+        h1 {
+            text-align: center;
+        }
+    </style>
 </head>
 
 <body>
     <div class="play-box">
-        <a href="/" target="_blank" title="另開新視窗">
-            <h1 class="logo">Rti 中央廣播電臺</h1>
+        <a href="https://www.rti.org.tw" target="_blank" title="另開新視窗">
+            <h1 class="logo">RTI 中央廣播電臺</h1>
         </a>
-        <h1 class="play-title">華語線上收聽 - <a href="/radio/programView/id/1638">潮臺灣2 - 開箱職人BAR</a></h1>
+        <h1 class="play-title">華語線上收聽</h1>
         <audio id="player" autoplay controls crossorigin style="width:100%"></audio>
     </div>
     <div id="vue">
         <span v-for="text in texts">{{text}} <br><br> </span>
         <b>{{ partial }}</b>
+        <br><br><br>
     </div>
 
     <script>
