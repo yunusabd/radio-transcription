@@ -21,6 +21,12 @@ waiting = []
 started = []
 
 
+from google.cloud import speech_v1p1beta1 as speech
+import io
+
+client = speech.SpeechClient()
+
+
 async def stuff():
     playlist = m3u8.load(URL, verify_ssl=False)
     for line in playlist.dumps().splitlines():
@@ -39,49 +45,32 @@ async def do_stuff_periodically(interval, periodic_function):
 
 
 async def run_stt(websocket, path):
+    while True:
+        if len(waiting) == 0:
+            await asyncio.sleep(3)
+        for line in waiting:
+            started.append(line)
+            print(BASE + line)
+            r = requests.get(BASE + line, verify=False, stream=False)
 
-    async with websockets.connect("ws://localhost:2700") as ws:
-        while True:
-            if len(waiting) == 0:
-                await asyncio.sleep(3)
-            for line in waiting:
-                started.append(line)
-                print(BASE + line)
-                r = requests.get(BASE + line, verify=False, stream=False)
-                with open("audio/" + line, "wb") as f:
-                    f.write(r.content)
-                    subprocess.call(
-                        [
-                            "ffmpeg",
-                            "-y",
-                            "-nostats",
-                            "-loglevel",
-                            "0",
-                            "-i",
-                            "audio/" + line,
-                            "-ac",
-                            "1",
-                            "-ar",
-                            "8000",
-                            "-filter:a",
-                            "loudnorm",
-                            "-acodec",
-                            "pcm_s16le",
-                            "audio/" + line[:-4] + ".wav",
-                        ]
-                    )
-                    wf = open("audio/" + line[:-4] + ".wav", "rb")
-                    while True:
-                        data = wf.read(8000)
-                        if len(data) == 0:
-                            break
-                        await ws.send(data)
-                        res = await ws.recv()
-                        await websocket.send(res)
-                    print(r.status_code)
-                    waiting.pop(waiting.index(line))
+            audio = speech.RecognitionAudio(content=r.content)
+            config = speech.RecognitionConfig(
+                encoding=speech.RecognitionConfig.AudioEncoding.MP3,
+                sample_rate_hertz=16000,
+                language_code="zh-TW",
+            )
 
-        await websocket.send('{"eof" : 1}')
+            response = client.recognize(config=config, audio=audio)
+
+            # Each result is for a consecutive portion of the audio. Iterate through
+            # them to get the transcripts for the entire audio file.
+            for result in response.results:
+                # The first alternative is the most likely one for this portion.
+                print(u"Transcript: {}".format(result.alternatives[0].transcript))
+                await websocket.send(result.alternatives[0].transcript)
+
+            print(r.status_code)
+            waiting.pop(waiting.index(line))
 
 
 async def main():

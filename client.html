@@ -44,16 +44,7 @@
                 var ws = new WebSocket("ws://127.0.0.1:8765/"),
                     messages = document.createElement('ul');
                 ws.onmessage = (event) => {
-                    data = JSON.parse(event.data)
-                    if (data.partial) {
-                        this.partial = data.partial
-                    }
-                    else if (data.text) {
-                        this.texts.push(data.text)
-                    }
-                    else {
-                        if (!data.partial && data.partial !== '') { console.log(data) }
-                    }
+                    this.texts.push(event.data)
                 };
                 const source = 'https://www.soundvideostar.com/live/_definst_/rti3/playlist.m3u8';
                 const audio = document.querySelector('audio');
