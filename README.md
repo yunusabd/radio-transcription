@@ -19,3 +19,7 @@ If you want a free service, you can use the branch `feature/vosk` along with [Vo
 5. `python radio.py`
 6. Open `client.html` in a browser and click play
 
+
+
+https://user-images.githubusercontent.com/20162302/139258993-11309ad5-42cc-4f62-95aa-5e0b4b2dfafe.mp4
+
