@@ -28,7 +28,6 @@
     </div>
     <div id="vue">
         <span v-for="text in texts">{{text}} <br><br> </span>
-        <b>{{ partial }}</b>
         <br><br><br>
     </div>
 
@@ -36,14 +35,12 @@
         const Transcribe = {
             data() {
                 return {
-                    partial: '',
                     texts: [],
                     player: null,
                 }
             },
             mounted() {
-                var ws = new WebSocket("ws://127.0.0.1:8765/"),
-                    messages = document.createElement('ul');
+                var ws = new WebSocket("ws://127.0.0.1:8765/");
                 ws.onmessage = (event) => {
                     const time = this.player.media.currentTime
                     const timeStamp = Math.floor(time / 60).toString() + ':' + Math.floor(time % 60)
@@ -59,8 +56,7 @@
                 else {
                     const hls = new Hls(); hls.loadSource(source);
                     hls.attachMedia(audio);
-                    this.player.on('languagechange', () => { setTimeout(() => hls.subtitleTrack = this.player.currentTrack, 50); });
-                }
+                };
             }
         }
         Vue.createApp(Transcribe).mount('#vue')
