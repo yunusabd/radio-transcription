@@ -34,7 +34,6 @@ async def get_filenames():
                     f.write(r.content)
                     print("audio/" + line)
                     yield "audio/" + line
-        await asyncio.sleep(5)
         print(round(time.time() - start_time, 1), "Finished fetching new filenames")
 
 

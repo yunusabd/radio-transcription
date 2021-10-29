@@ -28,7 +28,8 @@
     </div>
     <div id="vue">
         <span v-for="text in texts">{{text}} <br><br> </span>
-        <b>{{ partial }}</b>
+        <span><b>{{ partial }}</b><br><br> </span>
+
         <br><br><br>
     </div>
 
@@ -36,20 +37,27 @@
         const Transcribe = {
             data() {
                 return {
-                    partial: '',
                     texts: [],
+                    player: null,
+                    partial: ''
                 }
             },
             mounted() {
-                var ws = new WebSocket("ws://127.0.0.1:8765/"),
-                    messages = document.createElement('ul');
+                var ws = new WebSocket("ws://127.0.0.1:8765/");
                 ws.onmessage = (event) => {
+                    const time = this.player.media.currentTime
+                    const timeStamp = Math.floor(time / 60).toString() + ':' + Math.floor(time % 60)
                     data = JSON.parse(event.data)
                     if (data.partial) {
                         this.partial = data.partial
                     }
                     else if (data.text) {
-                        this.texts.push(data.text)
+                        if (data.text.length < 6) {
+                            this.texts[this.texts.length - 1] = this.texts[this.texts.length - 1] + data.text
+                        } else {
+                            this.texts.push(timeStamp + ' ' + data.text)
+                        }
+                        this.partial = ''
                     }
                     else {
                         if (!data.partial && data.partial !== '') { console.log(data) }
@@ -57,7 +65,7 @@
                 };
                 const source = 'https://www.soundvideostar.com/live/_definst_/rti3/playlist.m3u8';
                 const audio = document.querySelector('audio');
-                const player = new Plyr(audio, {
+                this.player = new Plyr(audio, {
                     captions: { active: true, update: true, language: 'auto' },
                     settings: ['captions', 'quality', 'loop']
                 });
@@ -65,9 +73,7 @@
                 else {
                     const hls = new Hls(); hls.loadSource(source);
                     hls.attachMedia(audio);
-                    player.on('languagechange', () => { setTimeout(() => hls.subtitleTrack = player.currentTrack, 50); });
-                }
-                window.player = player;
+                };
             }
         }
         Vue.createApp(Transcribe).mount('#vue')
