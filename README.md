@@ -6,7 +6,7 @@ This project transcribes the radio stream of Radio Taiwan International ([RTI](h
 
 You need a Google Cloud API key from here: [Create an API key](https://cloud.google.com/speech-to-text/docs/before-you-begin)
 
-The API has a free tier of 60 minutes per month, after which it costs $1.44 per hour of audio, or $0.96 if you have data loggin enabled.
+The API has a free tier of 60 minutes per month, after which it costs $1.44 per hour of audio, or $0.96 if you have data logging enabled.
 
 If you want a free service, you can use the branch `feature/vosk` along with [Vosk-Server](https://github.com/alphacep/vosk-server) for offline speech-to-text, but Google's quality is much much better. See the [README](https://github.com/yunusabd/radio-transcription/blob/features/vosk/README.md) in the `feature/vosk` branch for instructions on how to use.
 
