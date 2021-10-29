@@ -4,7 +4,7 @@ How to use with [Vosk-Server](https://github.com/alphacep/vosk-server) for offli
 
 ## Getting started
 
-1. You'll need to have `ffmpeg` installed.
+1. You'll need to have `ffmpeg` and `docker` installed.
 2. `conda env create -f environment.yml`
 3. `conda activate chinese`
 4. `docker run -d -p 2700:2700 alphacep/kaldi-cn:latest`
