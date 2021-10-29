@@ -1,0 +1,10 @@
+name: chinese
+channels:
+  - defaults
+dependencies:
+  - pip=21.2.4
+  - python=3.9.7
+  - pip:
+      - google-cloud-speech==2.11.0
+      - m3u8==0.9.0
+      - websockets==10.0
