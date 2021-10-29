@@ -1,93 +1,81 @@
 #!/usr/bin/env python3
+# -*- coding: utf-8 -*-
 
 import asyncio
-import websockets
-
+import io
+import os
 import requests
-import m3u8
 import subprocess
-
 import time
 import urllib3
 
-urllib3.disable_warnings()
+import m3u8
+import websockets
 
-start_time = time.time()
 
 URL = "https://www.soundvideostar.com/live/_definst_/rti3/chunklist_w1129242241.m3u8"
 BASE = "https://www.soundvideostar.com/live/_definst_/rti3/"
+PHRASES = ["台灣", "中央廣播電台"]
 
-waiting = []
-started = []
+audio_files = []
 
-
-async def stuff():
-    playlist = m3u8.load(URL, verify_ssl=False)
-    for line in playlist.dumps().splitlines():
-        if line.startswith("media") and line not in waiting and line not in started:
-            waiting.append(line)
-    print(round(time.time() - start_time, 1), "Finished getting new filenames")
+urllib3.disable_warnings()
+start_time = time.time()
 
 
-async def do_stuff_periodically(interval, periodic_function):
+async def get_filenames():
     while True:
-        print(round(time.time() - start_time, 1), "Getting filenames")
-        await asyncio.gather(
-            asyncio.sleep(interval),
-            periodic_function(),
-        )
-
-
-async def run_stt(websocket, path):
-
-    async with websockets.connect("ws://localhost:2700") as ws:
-        while True:
-            if len(waiting) == 0:
-                await asyncio.sleep(3)
-            for line in waiting:
-                started.append(line)
-                print(BASE + line)
+        playlist = m3u8.load(URL, verify_ssl=False)
+        for line in playlist.dumps().splitlines():
+            if line.startswith("media") and line not in audio_files:
+                audio_files.append(line)
                 r = requests.get(BASE + line, verify=False, stream=False)
                 with open("audio/" + line, "wb") as f:
                     f.write(r.content)
-                    subprocess.call(
-                        [
-                            "ffmpeg",
-                            "-y",
-                            "-nostats",
-                            "-loglevel",
-                            "0",
-                            "-i",
-                            "audio/" + line,
-                            "-ac",
-                            "1",
-                            "-ar",
-                            "8000",
-                            "-filter:a",
-                            "loudnorm",
-                            "-acodec",
-                            "pcm_s16le",
-                            "audio/" + line[:-4] + ".wav",
-                        ]
-                    )
-                    wf = open("audio/" + line[:-4] + ".wav", "rb")
-                    while True:
-                        data = wf.read(8000)
-                        if len(data) == 0:
-                            break
-                        await ws.send(data)
-                        res = await ws.recv()
-                        await websocket.send(res)
-                    print(r.status_code)
-                    waiting.pop(waiting.index(line))
+                    print("audio/" + line)
+                    yield "audio/" + line
+        await asyncio.sleep(5)
+        print(round(time.time() - start_time, 1), "Finished fetching new filenames")
 
-        await websocket.send('{"eof" : 1}')
+
+async def run_stt(websocket, path):
+    async with websockets.connect("ws://localhost:2700") as ws:
+        async for filename in get_filenames():
+            subprocess.call(
+                [
+                    "ffmpeg",
+                    "-y",
+                    "-nostats",
+                    "-loglevel",
+                    "0",
+                    "-i",
+                    filename,
+                    "-ac",
+                    "1",
+                    "-ar",
+                    "8000",
+                    "-filter:a",
+                    "loudnorm",
+                    "-acodec",
+                    "pcm_s16le",
+                    filename[:-4] + ".wav",
+                ]
+            )
+            wf = open(filename[:-4] + ".wav", "rb")
+            while True:
+                data = wf.read(8000)
+                if len(data) == 0:
+                    break
+                await ws.send(data)
+                res = await ws.recv()
+                await websocket.send(res)
 
 
 async def main():
+    if not os.path.exists("audio"):
+        os.makedirs("audio")
     async with websockets.serve(run_stt, "localhost", 8765):
-        task = asyncio.create_task(do_stuff_periodically(10, stuff))
-        await asyncio.Future()  # run forever
+        await asyncio.Future()
 
 
 asyncio.run(main())
