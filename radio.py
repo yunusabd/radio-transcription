@@ -4,16 +4,15 @@
 import asyncio
 import io
 import os
-import requests
 import time
 import urllib3
-
-import m3u8
+import subprocess
 import websockets
 
 from dotenv import load_dotenv
 import azure.cognitiveservices.speech as speechsdk
 from google.cloud import speech_v1p1beta1 as speech
+from _download import get_filenames
 
 URL = "https://www.soundvideostar.com/live/_definst_/rti3/chunklist_w1129242241.m3u8"
 BASE = "https://www.soundvideostar.com/live/_definst_/rti3/"
@@ -32,22 +31,8 @@ AZURE_REGION = os.getenv("AZURE_REGION")
 SERVICE = "Azure"
 
 
-async def get_filenames():
-    while True:
-        playlist = m3u8.load(URL, verify_ssl=False)
-        for line in playlist.dumps().splitlines():
-            if line.startswith("media") and line not in audio_files:
-                audio_files.append(line)
-                r = requests.get(BASE + line, verify=False, stream=False)
-                with open("audio/" + line, "wb") as f:
-                    f.write(r.content)
-                    print("audio/" + line)
-                    yield "audio/" + line
-        await asyncio.sleep(5)
-        print(round(time.time() - start_time, 1), "Finished fetching new filenames")
-
-
 async def Google(websocket, filename):
+    nonlocal client
     if not client:
         client = speech.SpeechClient()
     with io.open(filename, "rb") as audio_file:
@@ -70,22 +55,50 @@ async def Google(websocket, filename):
         await websocket.send(result.alternatives[0].transcript)
 
 
+async def Azure(websocket, filename):
+    speech_config = speechsdk.SpeechConfig(
+        subscription=AZURE_KEY,
+        region=AZURE_REGION,
+        speech_recognition_language="zh-TW",
+    )
+    async for filename in get_filenames():
+        subprocess.call(
+            [
+                "ffmpeg",
+                "-y",
+                "-nostats",
+                "-loglevel",
+                "0",
+                "-i",
+                filename,
+                "-ac",
+                "1",
+                "-ar",
+                "8000",
+                "-filter:a",
+                "loudnorm",
+                "-acodec",
+                "pcm_s16le",
+                filename[:-4] + ".wav",
+            ]
+        )
+        _file = filename[:-4] + ".wav"
+        audio_input = speechsdk.AudioConfig(filename=_file)
+        speech_recognizer = speechsdk.SpeechRecognizer(
+            speech_config=speech_config, audio_config=audio_input
+        )
+
+        result = speech_recognizer.recognize_once_async().get()
+        print(result.text)
+        await websocket.send(result.text)
+
+
 async def run_stt(websocket, path):
     async for filename in get_filenames():
         if SERVICE == "Google":
             await Google(websocket, filename)
         elif SERVICE == "Azure":
-            speech_config = speechsdk.SpeechConfig(
-                subscription=AZURE_KEY, region=AZURE_REGION
-            )
-            audio_input = speechsdk.AudioConfig(filename=filename)
-            speech_recognizer = speechsdk.SpeechRecognizer(
-                speech_config=speech_config, audio_config=audio_input
-            )
-
-            result = speech_recognizer.recognize_once_async().get()
-            print(result.text)
-            await websocket.send(result.text)
+            await Azure(websocket, filename)
 
 
 async def main():
